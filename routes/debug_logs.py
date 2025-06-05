@@ -7,8 +7,8 @@ import glob
 
 debug_logs = Blueprint("debug_logs", __name__)
 
-DEBUG_ADMIN_USER = os.environ.get("DEBUG_ADMIN_USER", "admin")
-DEBUG_ADMIN_PASS = os.environ.get("DEBUG_ADMIN_PASS", "password")
+DEBUG_ADMIN_USER = os.environ.get("DEBUG_ADMIN_USER")
+DEBUG_ADMIN_PASS = os.environ.get("DEBUG_ADMIN_PASS")
 
 USER_LOG_PATH = "logs/user_info.json"
 TASKS_PATH = "data/user_tasks.json"  # ✅ Live task data
