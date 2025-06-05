@@ -68,4 +68,15 @@ def get_user_coins(user_id):
 
 
 def get_reward_logs():
-    return load_json(REWARD_LOG_PATH, [])
+    ensure_file(REWARD_LOG_PATH, [])
+    try:
+        with open(REWARD_LOG_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, ValueError):
+        backup_path = REWARD_LOG_PATH.replace(".json", f"_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_backup.json")
+        os.rename(REWARD_LOG_PATH, backup_path)
+        with open(REWARD_LOG_PATH, "w") as f:
+            json.dump([], f)
+        print(f"[WARN] Corrupt log detected. Backed up to: {backup_path}")
+        return []
+
