@@ -1,6 +1,6 @@
 # routes/coins.py
 from flask import Blueprint, request, jsonify
-from coin_rewards import award_task_completion
+from handling.coin_rewards import award_task_completion
 
 coins = Blueprint('coins', __name__)
 
