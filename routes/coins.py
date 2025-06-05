@@ -4,10 +4,27 @@ from datetime import datetime
 
 coins = Blueprint('coins', __name__)
 
+DIFFICULTY_COINS = {
+    1: 10,
+    2: 15,
+    3: 25,
+    4: 40,
+}
+
+def award_task_completion(user_id, task_name, difficulty):
+    from handling.user_coins import update_user_coins
+    coins = DIFFICULTY_COINS.get(difficulty, 0)
+    if coins <= 0:
+        return 0
+
+    update_user_coins(user_id, coins)
+    log_coin_reward(user_id, task_name, difficulty, coins)
+    return coins
+
+
 @coins.route('/api/award-coins', methods=['POST'])
 def award_coins():
-    from handling.coin_rewards import award_task_completion  # ✅ Local import to avoid circular dependency
-
+    
     data = request.get_json()
     user_id = data.get('user_id')
     task_name = data.get('task_name')
