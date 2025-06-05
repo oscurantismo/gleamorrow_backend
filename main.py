@@ -5,13 +5,13 @@ from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-# ───── Load ENV before anything else ───── #
+# ───── Load ENV ───── #
+load_dotenv()  # Use Railway variables or .env in local
 TOKEN = os.environ.get("BOT_TOKEN")
 GAME_URL = "https://oscurantismo.github.io/gleamorrow/"
 
-# ───── Validate Token (unless local mode) ───── #
-if not LOCAL_DEV and not TOKEN:
-    raise ValueError("BOT_TOKEN is missing. Please set it in Railway environment variables.")
+if not TOKEN:
+    raise ValueError("❌ BOT_TOKEN is missing. Set it in Railway environment variables.")
 
 # ───── Telegram Imports ───── #
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
@@ -26,7 +26,7 @@ from handling.coin_rewards import coin_rewards
 from routes.user import user
 from routes.tasks import tasks
 
-# ───── Telegram Handlers ───── #
+# ───── Telegram Bot Handlers ───── #
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     first_name = user.first_name if user and user.first_name else "Anonymous"
@@ -90,7 +90,10 @@ def start_telegram_bot():
 # ───── Flask App Starter ───── #
 def start_flask_app():
     flask_app = Flask(__name__)
-    CORS(flask_app, origins=["https://oscurantismo.github.io", "http://localhost:5173"])  # add Vite dev host
+    CORS(flask_app, origins=[
+        "https://oscurantismo.github.io", 
+        "http://localhost:5173"
+    ])
     flask_app.register_blueprint(debug_logs)
     flask_app.register_blueprint(coin_rewards)
     flask_app.register_blueprint(user)
@@ -99,10 +102,7 @@ def start_flask_app():
     port = int(os.environ.get("PORT", 5000))
     flask_app.run(host="0.0.0.0", port=port)
 
-# ───── Run Dev or Full App ───── #
+# ───── Run Both Flask and Telegram ───── #
 if __name__ == "__main__":
-    if LOCAL_DEV:
-        start_flask_app()
-    else:
-        threading.Thread(target=start_flask_app).start()
-        start_telegram_bot()
+    threading.Thread(target=start_flask_app).start()
+    start_telegram_bot()
