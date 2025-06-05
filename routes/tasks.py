@@ -1,14 +1,18 @@
-from flask import Blueprint, request, jsonify
 import os
 import json
-from datetime import datetime
 import shutil
+from datetime import datetime
+from flask import Blueprint, request, jsonify
 
 tasks = Blueprint("tasks", __name__)
-TASKS_PATH = "data/user_tasks.json"
-BACKUP_DIR = "backups"
-USER_LOG_PATH = "logs/user_info.json"
 
+# ─── Mounted volume base path ───────────────────────────
+BASE_DIR = "/mnt/data"
+TASKS_PATH = os.path.join(BASE_DIR, "data/user_tasks.json")
+BACKUP_DIR = os.path.join(BASE_DIR, "backups")
+USER_LOG_PATH = os.path.join(BASE_DIR, "logs/user_info.json")
+
+# ─── Internal utilities ─────────────────────────────────
 def ensure_file():
     os.makedirs(os.path.dirname(TASKS_PATH), exist_ok=True)
     if not os.path.exists(TASKS_PATH):
@@ -52,6 +56,7 @@ def log_user_info(user_id, first_name=None, username=None):
     except Exception as e:
         print(f"[ERROR] Failed to log user info: {e}")
 
+# ─── API Endpoints ──────────────────────────────────────
 @tasks.route("/api/tasks", methods=["GET"])
 def get_user_tasks():
     user_id = request.args.get("user_id")
@@ -65,18 +70,18 @@ def get_user_tasks():
 def save_user_tasks():
     data = request.get_json()
     user_id = str(data.get("user_id"))
-    tasks = data.get("tasks", [])
+    user_tasks = data.get("tasks", [])
 
     if not user_id:
         return jsonify({"error": "Missing user_id"}), 400
 
     all_tasks = load_tasks()
-    all_tasks[user_id] = tasks
+    all_tasks[user_id] = user_tasks
     save_tasks(all_tasks)
+    backup_tasks()
 
     # Optional: log user info
     from handling.user_coins import log_user_info
     log_user_info(user_id, data.get("first_name"), data.get("username"))
 
-    return jsonify({"status": "saved", "count": len(tasks)})
-
+    return jsonify({"status": "saved", "count": len(user_tasks)})
