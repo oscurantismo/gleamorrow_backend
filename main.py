@@ -3,10 +3,7 @@ import logging
 import threading
 from flask import Flask
 from flask_cors import CORS
-from dotenv import load_dotenv
 
-# ───── Load ENV ───── #
-load_dotenv()  # Use Railway variables or .env in local
 TOKEN = os.environ.get("BOT_TOKEN")
 GAME_URL = "https://oscurantismo.github.io/gleamorrow/"
 
