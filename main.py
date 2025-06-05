@@ -12,6 +12,7 @@ from telegram.ext import (
 from routes.debug_logs import debug_logs  # Flask blueprint
 from routes.coins import coins
 from routes.user import user
+from routes.tasks import tasks
 
 # ───── ENV VARIABLES ───── #
 TOKEN = os.environ.get("BOT_TOKEN")
@@ -88,6 +89,7 @@ def start_flask_app():
     flask_app.register_blueprint(debug_logs)
     flask_app.register_blueprint(coins)
     flask_app.register_blueprint(user)
+    flask_app.register_blueprint(tasks)
 
     port = int(os.environ.get("PORT", 5000))
     flask_app.run(host="0.0.0.0", port=port)
