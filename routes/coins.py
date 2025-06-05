@@ -25,28 +25,28 @@ def ensure_log_file():
             json.dump([], f)
 
 def log_coin_reward(user_id, task_name, difficulty, coins):
-    ensure_log_file()
+    os.makedirs(os.path.dirname(REWARD_LOG_PATH), exist_ok=True)
+    entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "user_id": user_id,
+        "task_name": task_name,
+        "difficulty": difficulty,
+        "coins": coins
+    }
     try:
-        with open(REWARD_LOG_PATH, "r+", encoding="utf-8") as f:
-            data = json.load(f)
-            data.append({
-                "timestamp": datetime.utcnow().isoformat(),
-                "user_id": user_id,
-                "task_name": task_name,
-                "difficulty": difficulty,
-                "coins": coins
-            })
-            f.seek(0)
-            json.dump(data, f, indent=2)
-            f.truncate()
+        with open(REWARD_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry) + "\n")
     except Exception as e:
-        print(f"[ERROR] Failed to log reward: {e}")
+        print(f"[ERROR] Failed to append reward log: {e}")
+
 
 def get_reward_logs():
-    ensure_log_file()
+    if not os.path.exists(REWARD_LOG_PATH):
+        return []
+
     try:
         with open(REWARD_LOG_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
+            return [json.loads(line) for line in f if line.strip()]
     except Exception as e:
-        print(f"[ERROR] Failed to load reward logs: {e}")
+        print(f"[ERROR] Failed to parse reward logs: {e}")
         return []
