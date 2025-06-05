@@ -2,6 +2,8 @@ import os
 import logging
 import threading
 from flask import Flask
+from flask_cors import CORS
+
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, ContextTypes,
@@ -82,7 +84,7 @@ def start_telegram_bot():
 # ───── FLASK DEBUG ROUTES ───── #
 def start_flask_app():
     flask_app = Flask(__name__)
-    CORS(flask_app, origins="*")
+    CORS(flask_app, origins=["https://oscurantismo.github.io"])
     flask_app.register_blueprint(debug_logs)
     flask_app.register_blueprint(coins)
     flask_app.register_blueprint(user)
