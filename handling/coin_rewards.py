@@ -40,7 +40,7 @@ def save_json(path, data):
 
 # ─── Core reward logic ──────────────────────────────────
 def award_task_completion(user_id, task_name, difficulty, first_name=None, username=None):
-    coins = DIFFICULTY_COINS.get(difficulty, 0)
+    coins = DIFFICULTY_COINS.get(difficulty, 5)
     if coins <= 0:
         return 0
 
