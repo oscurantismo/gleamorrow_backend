@@ -11,9 +11,16 @@ def ensure_user_file():
 
 def get_user_coins(user_id):
     ensure_user_file()
-    with open(USER_DATA_PATH, "r") as f:
+    with open(USER_DATA_PATH, "r+") as f:
         data = json.load(f)
-    return data.get(str(user_id), 40)  # Default starting coins
+        if str(user_id) not in data:
+            data[str(user_id)] = 4000  # First launch bonus
+            f.seek(0)
+            json.dump(data, f, indent=2)
+            f.truncate()
+            print(f"[INFO] 🎉 New user {user_id} granted 4000 coins")
+        return data[str(user_id)]
+
 
 def update_user_coins(user_id, coins_to_add):
     ensure_user_file()
