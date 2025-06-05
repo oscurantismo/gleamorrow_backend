@@ -8,12 +8,13 @@ GAME_SHORT_NAME = "gleamorrow"  # Must be registered with BotFather
 GAME_URL = "https://oscurantismo.github.io/gleamorrow/"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_game(
-        game_short_name=GAME_SHORT_NAME,
+    await update.message.reply_text(
+        "Tap below to open the game!",
         reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("Play Game", callback_game={"game_short_name": GAME_SHORT_NAME})]
+            [InlineKeyboardButton(text="Launch Gleamorrow", web_app={"url": GAME_URL})]
         ])
     )
+
 
 async def game_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
