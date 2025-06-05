@@ -1,6 +1,6 @@
 # routes/debug_logs.py
 from flask import Blueprint, request, jsonify
-from reward_logger import get_reward_logs
+from logging.reward_logger import get_reward_logs
 
 debug_logs = Blueprint("debug_logs", __name__)
 
