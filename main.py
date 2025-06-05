@@ -1,7 +1,7 @@
 from telegram import Update, BotCommand, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = "BOT_TOKEN"
 GAME_SHORT_NAME = "gleamorrow"  # Must be registered with BotFather
 GAME_URL = "https://oscurantismo.github.io/gleamorrow/"
 
