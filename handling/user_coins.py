@@ -1,6 +1,7 @@
 import os
 import json
 import shutil
+from utils.backup_rotation import rotate_backups
 from datetime import datetime
 
 # ─── Mounted volume base path ───────────────────────────
@@ -8,6 +9,7 @@ BASE_DIR = "/mnt/data"
 USER_DATA_PATH = os.path.join(BASE_DIR, "data/user_coins.json")
 BACKUP_DIR = os.path.join(BASE_DIR, "backups")
 USER_LOG_PATH = os.path.join(BASE_DIR, "logs/user_info.json")
+MAX_BACKUPS = 5
 
 # ─── Ensure coin file exists ────────────────────────────
 def ensure_user_file():
@@ -23,6 +25,7 @@ def backup_user_coins():
     backup_path = os.path.join(BACKUP_DIR, f"coins_backup_{timestamp}.json")
     shutil.copy(USER_DATA_PATH, backup_path)
     print(f"[INFO] ✅ Coin backup saved: {backup_path}")
+    rotate_backups(BACKUP_DIR, "coins_backup_*.json", MAX_BACKUPS)
 
 # ─── User metadata logging ──────────────────────────────
 def log_user_info(user_id, first_name=None, username=None):
