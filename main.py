@@ -1,15 +1,22 @@
 import os
 import logging
+import threading
+from flask import Flask
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, ContextTypes,
+    MessageHandler, CallbackQueryHandler, filters
+)
+from routes.debug_logs import debug_logs  # Flask blueprint
 
+# ───── ENV VARIABLES ───── #
 TOKEN = os.environ.get("BOT_TOKEN")
 GAME_URL = "https://oscurantismo.github.io/gleamorrow/"
 
 if not TOKEN:
     raise ValueError("BOT_TOKEN is missing. Please set it in Railway environment variables.")
 
-# /start and /play command
+# ───── TELEGRAM COMMANDS ───── #
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     first_name = user.first_name if user and user.first_name else "Anonymous"
@@ -23,8 +30,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ])
     )
 
-
-# /about command or button
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "*About Gleamorrow*\n\n"
@@ -41,11 +46,10 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(text, parse_mode="Markdown")
 
-# Handle inline button "About"
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if query.data == "about":
-        await query.answer()  # remove loading
+        await query.answer()
         await query.message.reply_text(
             "*About Gleamorrow*\n\n"
             "🧚 *Gleamorrow* is a cosy self-care adventure where you grow with Seren.\n\n"
@@ -56,28 +60,32 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
 
-# Simulate /start on first message
 async def on_first_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.chat.type == "private" and update.message.text:
         await start(update, context)
 
-def main():
+# ───── TELEGRAM BOT STARTER ───── #
+def start_telegram_bot():
     logging.basicConfig(level=logging.INFO)
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # Commands
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("play", start))
     app.add_handler(CommandHandler("about", about))
-
-    # Button callbacks
-    from telegram.ext import CallbackQueryHandler
     app.add_handler(CallbackQueryHandler(handle_callback))
-
-    # Auto-start on first user text message
     app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, on_first_message))
 
     app.run_polling()
 
+# ───── FLASK DEBUG ROUTES ───── #
+def start_flask_app():
+    flask_app = Flask(__name__)
+    flask_app.register_blueprint(debug_logs)
+
+    port = int(os.environ.get("PORT", 5000))
+    flask_app.run(host="0.0.0.0", port=port)
+
+# ───── RUN BOTH TOGETHER ───── #
 if __name__ == "__main__":
-    main()
+    threading.Thread(target=start_flask_app).start()
+    start_telegram_bot()
