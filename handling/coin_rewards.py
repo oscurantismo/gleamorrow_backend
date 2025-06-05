@@ -1,5 +1,5 @@
 # coin_rewards.py
-from reward_logger import log_coin_reward
+from logging.reward_logger import log_coin_reward
 
 DIFFICULTY_COINS = {
     1: 10,
