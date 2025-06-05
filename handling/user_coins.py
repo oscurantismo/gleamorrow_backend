@@ -1,18 +1,22 @@
 import os
 import json
-from datetime import datetime
 import shutil
+from datetime import datetime
 
-USER_DATA_PATH = "data/user_coins.json"
-BACKUP_DIR = "backups"
-USER_LOG_PATH = "logs/user_info.json"
+# ─── Mounted volume base path ───────────────────────────
+BASE_DIR = "/mnt/data"
+USER_DATA_PATH = os.path.join(BASE_DIR, "data/user_coins.json")
+BACKUP_DIR = os.path.join(BASE_DIR, "backups")
+USER_LOG_PATH = os.path.join(BASE_DIR, "logs/user_info.json")
 
+# ─── Ensure coin file exists ────────────────────────────
 def ensure_user_file():
     os.makedirs(os.path.dirname(USER_DATA_PATH), exist_ok=True)
     if not os.path.exists(USER_DATA_PATH):
         with open(USER_DATA_PATH, "w") as f:
             json.dump({}, f)
 
+# ─── Backup coin file safely ────────────────────────────
 def backup_user_coins():
     os.makedirs(BACKUP_DIR, exist_ok=True)
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
@@ -20,6 +24,7 @@ def backup_user_coins():
     shutil.copy(USER_DATA_PATH, backup_path)
     print(f"[INFO] ✅ Coin backup saved: {backup_path}")
 
+# ─── User metadata logging ──────────────────────────────
 def log_user_info(user_id, first_name=None, username=None):
     os.makedirs(os.path.dirname(USER_LOG_PATH), exist_ok=True)
     try:
@@ -41,6 +46,7 @@ def log_user_info(user_id, first_name=None, username=None):
     except Exception as e:
         print(f"[ERROR] Failed to log user info: {e}")
 
+# ─── Coin access / creation logic ───────────────────────
 def get_user_coins(user_id, first_name=None, username=None):
     ensure_user_file()
     with open(USER_DATA_PATH, "r+") as f:
@@ -54,6 +60,7 @@ def get_user_coins(user_id, first_name=None, username=None):
         log_user_info(user_id, first_name, username)
         return data[str(user_id)]
 
+# ─── Coin update logic ──────────────────────────────────
 def update_user_coins(user_id, coins_to_add, first_name=None, username=None):
     ensure_user_file()
     with open(USER_DATA_PATH, "r+") as f:
