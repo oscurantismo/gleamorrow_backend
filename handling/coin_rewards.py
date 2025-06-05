@@ -1,6 +1,7 @@
 import os
 import json
 from datetime import datetime
+from routes.coins import log_coin_reward
 
 REWARD_LOG_PATH = "logs/reward_log.json"
 USER_COIN_PATH = "logs/user_coins.json"
@@ -59,6 +60,8 @@ def award_task_completion(user_id, task_name, difficulty):
     user_coins[user_id] = user_coins.get(user_id, 40) + coins
     save_json(USER_COIN_PATH, user_coins)
 
+    update_user_coins(user_id, coins)
+    log_coin_reward(user_id, task_name, difficulty, coins)
     return coins
 
 
