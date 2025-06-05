@@ -1,6 +1,7 @@
 import os
 import json
 import shutil
+from utils.backup_rotation import rotate_backups
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 
@@ -11,6 +12,7 @@ BASE_DIR = "/mnt/data"
 TASKS_PATH = os.path.join(BASE_DIR, "data/user_tasks.json")
 BACKUP_DIR = os.path.join(BASE_DIR, "backups")
 USER_LOG_PATH = os.path.join(BASE_DIR, "logs/user_info.json")
+MAX_BACKUPS = 5
 
 # ─── Internal utilities ─────────────────────────────────
 def ensure_file():
@@ -34,6 +36,7 @@ def backup_tasks():
     backup_path = os.path.join(BACKUP_DIR, f"tasks_backup_{timestamp}.json")
     shutil.copy(TASKS_PATH, backup_path)
     print(f"[INFO] ✅ Task backup saved: {backup_path}")
+    rotate_backups(BACKUP_DIR, "tasks_backup_*.json", MAX_BACKUPS)
 
 def log_user_info(user_id, first_name=None, username=None):
     os.makedirs(os.path.dirname(USER_LOG_PATH), exist_ok=True)
