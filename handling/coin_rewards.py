@@ -53,7 +53,7 @@ def award_task_completion(user_id, task_name, difficulty):
     # Update user coins
     update_user_coins(user_id, coins)
 
-    # Log coin reward
+    # Log coin reward for debug panel
     log_coin_reward(user_id, task_name, difficulty, coins)
 
     return coins
