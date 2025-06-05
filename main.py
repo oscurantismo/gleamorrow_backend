@@ -82,8 +82,7 @@ def start_telegram_bot():
 def start_flask_app():
     flask_app = Flask(__name__)
     flask_app.register_blueprint(debug_logs)
-    app.register_blueprint(coins)
-
+    flask_app.register_blueprint(coins)
 
     port = int(os.environ.get("PORT", 5000))
     flask_app.run(host="0.0.0.0", port=port)
