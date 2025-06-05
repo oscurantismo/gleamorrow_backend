@@ -4,8 +4,9 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from handling.user_coins import update_user_coins, get_user_coins, log_user_info
 
-# ─── Config ─────────────────────────────────────────────
-REWARD_LOG_PATH = "logs/reward_log.json"
+# ─── Mounted log directory ──────────────────────────────
+BASE_DIR = "/mnt/data"
+REWARD_LOG_PATH = os.path.join(BASE_DIR, "logs/reward_log.json")
 coin_rewards = Blueprint('coins', __name__)
 
 # ─── Coin values ────────────────────────────────────────
