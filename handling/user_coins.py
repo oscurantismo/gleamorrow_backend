@@ -65,7 +65,7 @@ def update_user_coins(user_id, coins_to_add, first_name=None, username=None):
     ensure_user_file()
     with open(USER_DATA_PATH, "r+") as f:
         data = json.load(f)
-        current = data.get(str(user_id), 40)
+        current = data.get(str(user_id), 4000)
         new_total = current + coins_to_add
         data[str(user_id)] = new_total
         f.seek(0)
