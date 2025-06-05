@@ -82,6 +82,7 @@ def start_telegram_bot():
 # ───── FLASK DEBUG ROUTES ───── #
 def start_flask_app():
     flask_app = Flask(__name__)
+    CORS(flask_app, origins="*")
     flask_app.register_blueprint(debug_logs)
     flask_app.register_blueprint(coins)
     flask_app.register_blueprint(user)
