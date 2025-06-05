@@ -28,6 +28,7 @@ def check_auth(auth_header):
 
 @debug_logs.route("/debug-logs", methods=["GET"])
 def debug_logs_page():
+    print("Auth header:", request.headers.get("Authorization"))
     auth_header = request.headers.get("Authorization")
 
     if not check_auth(auth_header):
