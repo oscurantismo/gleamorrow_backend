@@ -11,14 +11,18 @@ if not TOKEN:
 
 # /start and /play command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    first_name = user.first_name if user and user.first_name else "Anonymous"
+
     await update.message.reply_text(
-        "🌿 Welcome to *Gleamorrow*! Tap below to launch the game:",
+        f"🌿 Welcome, *{first_name}*, to *Gleamorrow*! Tap below to launch the game:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("🌟 Launch Gleamorrow", web_app={"url": GAME_URL})],
             [InlineKeyboardButton("ℹ️ About the Game", callback_data="about")]
         ])
     )
+
 
 # /about command or button
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
