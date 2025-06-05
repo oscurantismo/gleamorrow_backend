@@ -1,19 +1,22 @@
-from flask import Blueprint, request, Response
-from handling.coin_rewards import get_reward_logs
 import os
-import base64
 import json
+import base64
 import glob
+from flask import Blueprint, request, Response, send_file
+from handling.coin_rewards import get_reward_logs
 
 debug_logs = Blueprint("debug_logs", __name__)
 
 DEBUG_ADMIN_USER = os.environ.get("DEBUG_ADMIN_USER")
 DEBUG_ADMIN_PASS = os.environ.get("DEBUG_ADMIN_PASS")
 
-USER_LOG_PATH = "logs/user_info.json"
-TASKS_PATH = "data/user_tasks.json"  # ✅ Live task data
-TASK_BACKUP_PATH = "backups/tasks_backup_*.json"
-COIN_BACKUP_PATH = "backups/coins_backup_*.json"
+# ───── Mounted base dir ───── #
+BASE_DIR = "/mnt/data"
+
+USER_LOG_PATH = os.path.join(BASE_DIR, "logs/user_info.json")
+TASKS_PATH = os.path.join(BASE_DIR, "data/user_tasks.json")
+TASK_BACKUP_PATH = os.path.join(BASE_DIR, "backups/tasks_backup_*.json")
+COIN_BACKUP_PATH = os.path.join(BASE_DIR, "backups/coins_backup_*.json")
 
 def check_auth(auth_header):
     if not auth_header:
@@ -38,7 +41,7 @@ def load_json(path, default):
 def load_backups(pattern):
     files = sorted(glob.glob(pattern), reverse=True)
     data = []
-    for path in files[:5]:  # Limit to latest 5 backups
+    for path in files[:5]:
         try:
             with open(path, "r") as f:
                 content = json.load(f)
@@ -55,7 +58,7 @@ def debug_logs_page():
 
     reward_logs = get_reward_logs()
     user_logs = load_json(USER_LOG_PATH, {})
-    current_tasks = load_json(TASKS_PATH, {})  # ✅ Live task state
+    current_tasks = load_json(TASKS_PATH, {})
     task_backups = load_backups(TASK_BACKUP_PATH)
     coin_backups = load_backups(COIN_BACKUP_PATH)
 
@@ -166,3 +169,22 @@ def debug_logs_page():
     </html>
     """
     return Response(html, mimetype="text/html")
+
+# ───── Download log files securely ───── #
+@debug_logs.route("/api/download/<filename>")
+def download_log_file(filename):
+    allowed = {
+        "reward": "logs/reward_log.json",
+        "users": "logs/user_info.json",
+        "coins": "data/user_coins.json",
+        "tasks": "data/user_tasks.json"
+    }
+
+    if filename not in allowed:
+        return "Not allowed", 403
+
+    path = os.path.join(BASE_DIR, allowed[filename])
+    if not os.path.exists(path):
+        return "File not found", 404
+
+    return send_file(path, as_attachment=True)
