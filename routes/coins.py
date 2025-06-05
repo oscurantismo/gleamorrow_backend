@@ -1,6 +1,4 @@
-# routes/coins.py
 from flask import Blueprint, request, jsonify
-from handling.coin_rewards import award_task_completion
 import os, json
 from datetime import datetime
 
@@ -8,12 +6,15 @@ coins = Blueprint('coins', __name__)
 
 @coins.route('/api/award-coins', methods=['POST'])
 def award_coins():
+    from handling.coin_rewards import award_task_completion  # ✅ Local import to avoid circular dependency
+
     data = request.get_json()
     user_id = data.get('user_id')
     task_name = data.get('task_name')
     difficulty = int(data.get('difficulty', 0))
     coins_awarded = award_task_completion(user_id, task_name, difficulty)
     return jsonify({'status': 'success', 'coins': coins_awarded})
+
 
 REWARD_LOG_PATH = "logs/reward_log.json"
 
@@ -49,4 +50,3 @@ def get_reward_logs():
     except Exception as e:
         print(f"[ERROR] Failed to load reward logs: {e}")
         return []
-
