@@ -3,25 +3,32 @@ import logging
 import threading
 from flask import Flask
 from flask_cors import CORS
+from dotenv import load_dotenv
 
+# ───── Load ENV before anything else ───── #
+load_dotenv('.env.dev')
+TOKEN = os.environ.get("BOT_TOKEN")
+LOCAL_DEV = os.environ.get("LOCAL_DEV") == "1"
+GAME_URL = "https://oscurantismo.github.io/gleamorrow/"
+
+# ───── Validate Token (unless local mode) ───── #
+if not LOCAL_DEV and not TOKEN:
+    raise ValueError("BOT_TOKEN is missing. Please set it in Railway environment variables.")
+
+# ───── Telegram Imports ───── #
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, ContextTypes,
     MessageHandler, CallbackQueryHandler, filters
 )
-from routes.debug_logs import debug_logs  # Flask blueprint
-from routes.coins import coins
+
+# ───── Flask Routes ───── #
+from routes.debug_logs import debug_logs
+from handling.coin_rewards import coin_rewards
 from routes.user import user
 from routes.tasks import tasks
 
-# ───── ENV VARIABLES ───── #
-TOKEN = os.environ.get("BOT_TOKEN")
-GAME_URL = "https://oscurantismo.github.io/gleamorrow/"
-
-if not TOKEN:
-    raise ValueError("BOT_TOKEN is missing. Please set it in Railway environment variables.")
-
-# ───── TELEGRAM COMMANDS ───── #
+# ───── Telegram Handlers ───── #
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     first_name = user.first_name if user and user.first_name else "Anonymous"
@@ -69,7 +76,7 @@ async def on_first_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.chat.type == "private" and update.message.text:
         await start(update, context)
 
-# ───── TELEGRAM BOT STARTER ───── #
+# ───── Telegram Bot Starter ───── #
 def start_telegram_bot():
     logging.basicConfig(level=logging.INFO)
     app = ApplicationBuilder().token(TOKEN).build()
@@ -82,19 +89,22 @@ def start_telegram_bot():
 
     app.run_polling()
 
-# ───── FLASK DEBUG ROUTES ───── #
+# ───── Flask App Starter ───── #
 def start_flask_app():
     flask_app = Flask(__name__)
-    CORS(flask_app, origins=["https://oscurantismo.github.io"])
+    CORS(flask_app, origins=["https://oscurantismo.github.io", "http://localhost:5173"])  # add Vite dev host
     flask_app.register_blueprint(debug_logs)
-    flask_app.register_blueprint(coins)
+    flask_app.register_blueprint(coin_rewards)
     flask_app.register_blueprint(user)
     flask_app.register_blueprint(tasks)
 
     port = int(os.environ.get("PORT", 5000))
     flask_app.run(host="0.0.0.0", port=port)
 
-# ───── RUN BOTH TOGETHER ───── #
+# ───── Run Dev or Full App ───── #
 if __name__ == "__main__":
-    threading.Thread(target=start_flask_app).start()
-    start_telegram_bot()
+    if LOCAL_DEV:
+        start_flask_app()
+    else:
+        threading.Thread(target=start_flask_app).start()
+        start_telegram_bot()
