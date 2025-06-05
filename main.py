@@ -6,9 +6,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 
 # ───── Load ENV before anything else ───── #
-load_dotenv('.env.dev')
 TOKEN = os.environ.get("BOT_TOKEN")
-LOCAL_DEV = os.environ.get("LOCAL_DEV") == "1"
 GAME_URL = "https://oscurantismo.github.io/gleamorrow/"
 
 # ───── Validate Token (unless local mode) ───── #
