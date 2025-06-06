@@ -22,6 +22,7 @@ from routes.debug_logs import debug_logs
 from handling.coin_rewards import coin_rewards
 from routes.user import user
 from routes.tasks import tasks
+from routes.focus import focus
 
 # ───── Telegram Bot Handlers ───── #
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -95,6 +96,7 @@ def start_flask_app():
     flask_app.register_blueprint(coin_rewards)
     flask_app.register_blueprint(user)
     flask_app.register_blueprint(tasks)
+    flask_app.register_blueprint(focus)
 
     port = int(os.environ.get("PORT", 5000))
     flask_app.run(host="0.0.0.0", port=port)
