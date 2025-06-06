@@ -1,0 +1,58 @@
+import os
+import json
+from flask import Blueprint, request, jsonify
+
+focus = Blueprint("focus", __name__)
+
+BASE_DIR = "/mnt/data"
+FOCUS_PATH = os.path.join(BASE_DIR, "data/focus_data.json")
+
+def load_focus_data():
+    if not os.path.exists(FOCUS_PATH):
+        return {}
+    with open(FOCUS_PATH, "r") as f:
+        return json.load(f)
+
+def save_focus_data(data):
+    os.makedirs(os.path.dirname(FOCUS_PATH), exist_ok=True)
+    with open(FOCUS_PATH, "w") as f:
+        json.dump(data, f, indent=2)
+
+@focus.route("/api/focus/update", methods=["POST"])
+def update_focus_data():
+    payload = request.json
+    user_id = str(payload.get("user_id"))
+    minutes = int(payload.get("minutes", 0))
+    unlocked = int(payload.get("flowers_unlocked", 0))
+
+    if not user_id or minutes < 0:
+        return jsonify({"error": "Missing or invalid user_id/minutes"}), 400
+
+    data = load_focus_data()
+    if user_id not in data:
+        data[user_id] = {
+            "total_minutes": 0,
+            "sessions_completed": 0,
+            "flowers_unlocked": 0
+        }
+
+    data[user_id]["total_minutes"] += minutes
+    data[user_id]["sessions_completed"] += 1
+    data[user_id]["flowers_unlocked"] = max(data[user_id]["flowers_unlocked"], unlocked)
+
+    save_focus_data(data)
+    return jsonify({"success": True, "data": data[user_id]})
+
+@focus.route("/api/focus/stats", methods=["GET"])
+def get_focus_stats():
+    user_id = request.args.get("id")
+    if not user_id:
+        return jsonify({"error": "Missing user ID"}), 400
+
+    data = load_focus_data()
+    stats = data.get(user_id, {
+        "total_minutes": 0,
+        "sessions_completed": 0,
+        "flowers_unlocked": 0
+    })
+    return jsonify(stats)
