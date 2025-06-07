@@ -25,8 +25,21 @@ def update_focus_data():
     user_id = str(payload.get("user_id"))
     minutes = int(payload.get("minutes", 0))
     unlocked = int(payload.get("flowers_unlocked", 0))
+    flowers = payload.get("flowers", [])
 
-    flowers = payload.get("flowers", [])  # List of {"name": flowerName, "timestamp": ISO string}
+    if not user_id or minutes < 0:
+        return jsonify({"error": "Missing or invalid user_id/minutes"}), 400
+
+    data = load_focus_data()  # ✅ moved before flower logic
+
+    if user_id not in data:
+        data[user_id] = {
+            "total_minutes": 0,
+            "sessions_completed": 0,
+            "flowers_unlocked": 0,
+            "flowers": {}
+        }
+
     if "flowers" not in data[user_id]:
         data[user_id]["flowers"] = {}
 
@@ -35,17 +48,6 @@ def update_focus_data():
         ts = flower.get("timestamp") or datetime.utcnow().isoformat()
         if fname and fname not in data[user_id]["flowers"]:
             data[user_id]["flowers"][fname] = ts
-
-    if not user_id or minutes < 0:
-        return jsonify({"error": "Missing or invalid user_id/minutes"}), 400
-
-    data = load_focus_data()
-    if user_id not in data:
-        data[user_id] = {
-            "total_minutes": 0,
-            "sessions_completed": 0,
-            "flowers_unlocked": 0
-        }
 
     data[user_id]["total_minutes"] += minutes
     data[user_id]["sessions_completed"] += 1
