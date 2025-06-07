@@ -15,6 +15,7 @@ BASE_DIR = "/mnt/data"
 
 USER_LOG_PATH = os.path.join(BASE_DIR, "logs/user_info.json")
 TASKS_PATH = os.path.join(BASE_DIR, "data/user_tasks.json")
+FOCUS_PATH = os.path.join(BASE_DIR, "data/focus_data.json")
 TASK_BACKUP_PATH = os.path.join(BASE_DIR, "backups/tasks_backup_*.json")
 COIN_BACKUP_PATH = os.path.join(BASE_DIR, "backups/coins_backup_*.json")
 
@@ -59,6 +60,7 @@ def debug_logs_page():
     reward_logs = get_reward_logs()
     user_logs = load_json(USER_LOG_PATH, {})
     current_tasks = load_json(TASKS_PATH, {})
+    focus_data = load_json(FOCUS_PATH, {})
     task_backups = load_backups(TASK_BACKUP_PATH)
     coin_backups = load_backups(COIN_BACKUP_PATH)
 
@@ -118,6 +120,7 @@ def debug_logs_page():
             <button id="rewards-btn" class="active" onclick="showLogs('rewards')">🎁 Coin Rewards</button>
             <button id="users-btn" onclick="showLogs('users')">👤 User Info</button>
             <button id="current-tasks-btn" onclick="showLogs('current-tasks')">📄 Current Tasks</button>
+            <button id="focus-btn" onclick="showLogs('focus')">🌼 Focus Stats</button>
             <button id="tasks-btn" onclick="showLogs('tasks')">📝 Task Backups</button>
             <button id="coins-btn" onclick="showLogs('coins')">🪙 Coin Backups</button>
         </div>
@@ -150,6 +153,20 @@ def debug_logs_page():
             </div>
         </div>
 
+        <div id="focus" class="log-type" style="display:none;">
+            {''.join(f'''
+            <div class="log-entry">
+                <strong>User ID:</strong> {uid}<br>
+                <strong>Total Minutes:</strong> {data.get("total_minutes", 0)}<br>
+                <strong>Sessions Completed:</strong> {data.get("sessions_completed", 0)}<br>
+                <strong>Flowers Unlocked:</strong> {data.get("flowers_unlocked", 0)}<br>
+                <strong>Flower Unlocks:</strong>
+                <ul>
+                    {''.join(f"<li>{flower} — {ts}</li>" for flower, ts in data.get("flowers", {}).items())}
+                </ul>
+            </div>''' for uid, data in focus_data.items())}
+        </div>
+
         <div id="tasks" class="log-type" style="display:none;">
             {''.join(f'''
             <div class="log-entry">
@@ -170,7 +187,6 @@ def debug_logs_page():
     """
     return Response(html, mimetype="text/html")
 
-# ───── Download log files securely ───── #
 @debug_logs.route("/api/download/<filename>")
 def download_log_file(filename):
     allowed = {
