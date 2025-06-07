@@ -22,15 +22,28 @@ def save_focus_data(data):
 @focus.route("/api/focus/update", methods=["POST"])
 def update_focus_data():
     payload = request.json
+
     user_id = str(payload.get("user_id"))
-    minutes = int(payload.get("minutes", 0))
-    unlocked = int(payload.get("flowers_unlocked", 0))
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
+
+    try:
+        minutes = int(payload.get("minutes", 0))
+        if minutes < 0:
+            raise ValueError("Negative minutes")
+    except Exception as e:
+        print("Invalid minutes:", e)
+        return jsonify({"error": "Invalid minutes"}), 400
+
+    try:
+        unlocked = int(payload.get("flowers_unlocked", 0)) if payload.get("flowers_unlocked") is not None else 0
+    except Exception as e:
+        print("Invalid flowers_unlocked:", e)
+        unlocked = 0
+
     flowers = payload.get("flowers", [])
 
-    if not user_id or minutes < 0:
-        return jsonify({"error": "Missing or invalid user_id/minutes"}), 400
-
-    data = load_focus_data()  # ✅ moved before flower logic
+    data = load_focus_data()
 
     if user_id not in data:
         data[user_id] = {
