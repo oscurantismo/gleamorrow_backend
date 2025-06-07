@@ -1,6 +1,7 @@
 import os
 import json
 from flask import Blueprint, request, jsonify
+from datetime import datetime
 
 focus = Blueprint("focus", __name__)
 
@@ -24,6 +25,16 @@ def update_focus_data():
     user_id = str(payload.get("user_id"))
     minutes = int(payload.get("minutes", 0))
     unlocked = int(payload.get("flowers_unlocked", 0))
+
+    flowers = payload.get("flowers", [])  # List of {"name": flowerName, "timestamp": ISO string}
+    if "flowers" not in data[user_id]:
+        data[user_id]["flowers"] = {}
+
+    for flower in flowers:
+        fname = flower.get("name")
+        ts = flower.get("timestamp") or datetime.utcnow().isoformat()
+        if fname and fname not in data[user_id]["flowers"]:
+            data[user_id]["flowers"][fname] = ts
 
     if not user_id or minutes < 0:
         return jsonify({"error": "Missing or invalid user_id/minutes"}), 400
@@ -53,6 +64,8 @@ def get_focus_stats():
     stats = data.get(user_id, {
         "total_minutes": 0,
         "sessions_completed": 0,
-        "flowers_unlocked": 0
+        "flowers_unlocked": 0,
+        "flowers": {}
     })
+
     return jsonify(stats)
