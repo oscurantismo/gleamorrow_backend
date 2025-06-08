@@ -1,23 +1,25 @@
 import os
 import json
 import base64
-import glob
 from flask import Blueprint, request, Response, send_file
 from handling.coin_rewards import get_reward_logs
+from handling.backup_utils import (
+    list_backups,
+    load_backup_content,
+    save_manual_backup,
+    replace_data_file,
+    get_file_path_for_type
+)
 
 debug_logs = Blueprint("debug_logs", __name__)
 
 DEBUG_ADMIN_USER = os.environ.get("DEBUG_ADMIN_USER")
 DEBUG_ADMIN_PASS = os.environ.get("DEBUG_ADMIN_PASS")
-
-# ───── Mounted base dir ───── #
 BASE_DIR = "/mnt/data"
 
 USER_LOG_PATH = os.path.join(BASE_DIR, "logs/user_info.json")
 TASKS_PATH = os.path.join(BASE_DIR, "data/user_tasks.json")
 FOCUS_PATH = os.path.join(BASE_DIR, "data/focus_data.json")
-TASK_BACKUP_PATH = os.path.join(BASE_DIR, "backups/tasks_backup_*.json")
-COIN_BACKUP_PATH = os.path.join(BASE_DIR, "backups/coins_backup_*.json")
 
 def check_auth(auth_header):
     if not auth_header:
@@ -39,17 +41,30 @@ def load_json(path, default):
     except:
         return default
 
-def load_backups(pattern):
-    files = sorted(glob.glob(pattern), reverse=True)
-    data = []
-    for path in files[:5]:
-        try:
-            with open(path, "r") as f:
-                content = json.load(f)
-                data.append((os.path.basename(path), content))
-        except:
-            continue
-    return data
+def format_backup_html(prefix):
+    entries = list_backups(prefix)
+    html = ""
+    for path in entries:
+        fname = os.path.basename(path)
+        content = load_backup_content(path)
+        snippet = json.dumps(content, indent=2)[:1000] if content else "(error loading file)"
+        html += f'''
+        <div class="log-entry">
+            <strong>File:</strong> {fname}<br>
+            <button onclick="window.location='/api/download-backup/{prefix}/{fname}'">⬇ Download</button>
+            <button onclick="togglePreview(this)">👁 Preview</button>
+            <button onclick="uploadBackup('{prefix}', '{fname}')">⏫ Use This Backup</button>
+            <pre style="display:none;">{snippet}</pre>
+        </div>
+        '''
+    html += f'''
+        <div class="log-entry">
+            <strong>Manual Backup:</strong><br>
+            <button onclick="manualBackup('{prefix}')">💾 Create Manual Backup</button>
+            <input type="file" onchange="uploadManual(event, '{prefix}')" />
+        </div>
+    '''
+    return html
 
 @debug_logs.route("/debug-logs", methods=["GET"])
 def debug_logs_page():
@@ -61,8 +76,6 @@ def debug_logs_page():
     user_logs = load_json(USER_LOG_PATH, {})
     current_tasks = load_json(TASKS_PATH, {})
     focus_data = load_json(FOCUS_PATH, {})
-    task_backups = load_backups(TASK_BACKUP_PATH)
-    coin_backups = load_backups(COIN_BACKUP_PATH)
 
     html = f"""
     <!DOCTYPE html>
@@ -71,16 +84,12 @@ def debug_logs_page():
         <title>Debug Logs</title>
         <style>
             body {{
-                font-family: Arial, sans-serif;
+                font-family: Arial;
                 background: #f8f8f8;
-                margin: 0;
                 padding: 20px;
                 color: #222;
             }}
             h1 {{ color: #444; }}
-            .nav {{
-                margin-bottom: 20px;
-            }}
             .nav button {{
                 margin-right: 10px;
                 padding: 8px 16px;
@@ -99,18 +108,35 @@ def debug_logs_page():
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }}
             .log-entry pre {{
-                margin: 0;
-                white-space: pre-wrap;
+                margin-top: 10px;
+                background: #eee;
+                padding: 10px;
                 font-size: 13px;
+                display: none;
             }}
         </style>
         <script>
             function showLogs(type) {{
                 document.querySelectorAll(".log-type").forEach(el => el.style.display = "none");
                 document.getElementById(type).style.display = "block";
-
                 document.querySelectorAll(".nav button").forEach(btn => btn.classList.remove("active"));
                 document.getElementById(type + "-btn").classList.add("active");
+            }}
+            function togglePreview(btn) {{
+                const pre = btn.parentElement.querySelector("pre");
+                pre.style.display = pre.style.display === "none" ? "block" : "none";
+            }}
+            function manualBackup(type) {{
+                fetch(`/api/manual-backup/${{type}}`).then(() => location.reload());
+            }}
+            function uploadBackup(type, fname) {{
+                fetch(`/api/restore-backup/${{type}}/${{fname}}`).then(() => alert("Backup restored."));
+            }}
+            function uploadManual(event, type) {{
+                const file = event.target.files[0];
+                const formData = new FormData();
+                formData.append("file", file);
+                fetch(`/api/upload-backup/${{type}}`, {{ method: "POST", body: formData }}).then(() => location.reload());
             }}
         </script>
     </head>
@@ -128,12 +154,12 @@ def debug_logs_page():
         <div id="rewards" class="log-type">
             {''.join(f'''
             <div class="log-entry">
-                <strong>User:</strong> {entry.get('user_id')}<br>
-                <strong>Task:</strong> {entry.get('task_name')}<br>
-                <strong>Difficulty:</strong> {entry.get('difficulty')}<br>
-                <strong>Coins:</strong> {entry.get('coins')}<br>
-                <strong>Timestamp:</strong> {entry.get('timestamp')}
-            </div>''' for entry in reward_logs)}
+                <strong>User:</strong> {e.get('user_id')}<br>
+                <strong>Task:</strong> {e.get('task_name')}<br>
+                <strong>Difficulty:</strong> {e.get('difficulty')}<br>
+                <strong>Coins:</strong> {e.get('coins')}<br>
+                <strong>Timestamp:</strong> {e.get('timestamp')}
+            </div>''' for e in reward_logs)}
         </div>
 
         <div id="users" class="log-type" style="display:none;">
@@ -142,7 +168,7 @@ def debug_logs_page():
                 <strong>User ID:</strong> {uid}<br>
                 <strong>First Name:</strong> {info.get("first_name")}<br>
                 <strong>Username:</strong> {info.get("username")}<br>
-                <strong>Last Seen:</strong> {info.get("last_seen", info.get("last_coin_update", info.get("last_task_update", "N/A")))}
+                <strong>Last Seen:</strong> {info.get("last_seen", "N/A")}
             </div>''' for uid, info in user_logs.items())}
         </div>
 
@@ -157,50 +183,63 @@ def debug_logs_page():
             {''.join(f'''
             <div class="log-entry">
                 <strong>User ID:</strong> {uid}<br>
-                <strong>Total Minutes:</strong> {data.get("total_minutes", 0)}<br>
-                <strong>Sessions Completed:</strong> {data.get("sessions_completed", 0)}<br>
-                <strong>Flowers Unlocked:</strong> {data.get("flowers_unlocked", 0)}<br>
-                <strong>Flower Unlocks:</strong>
-                <ul>
-                    {''.join(f"<li>{flower} — {ts}</li>" for flower, ts in data.get("flowers", {}).items())}
-                </ul>
-            </div>''' for uid, data in focus_data.items())}
+                <strong>Total Minutes:</strong> {d.get("total_minutes", 0)}<br>
+                <strong>Sessions Completed:</strong> {d.get("sessions_completed", 0)}<br>
+                <strong>Flowers Unlocked:</strong> {d.get("flowers_unlocked", 0)}<br>
+                <ul>{''.join(f"<li>{k}: {v}</li>" for k, v in d.get("flowers", {}).items())}</ul>
+            </div>''' for uid, d in focus_data.items())}
         </div>
 
         <div id="tasks" class="log-type" style="display:none;">
-            {''.join(f'''
-            <div class="log-entry">
-                <strong>File:</strong> {fname}<br>
-                <pre>{json.dumps(content, indent=2)[:1000]}</pre>
-            </div>''' for fname, content in task_backups)}
+            {format_backup_html("tasks")}
         </div>
 
         <div id="coins" class="log-type" style="display:none;">
-            {''.join(f'''
-            <div class="log-entry">
-                <strong>File:</strong> {fname}<br>
-                <pre>{json.dumps(content, indent=2)[:1000]}</pre>
-            </div>''' for fname, content in coin_backups)}
+            {format_backup_html("coins")}
         </div>
     </body>
     </html>
     """
     return Response(html, mimetype="text/html")
 
-@debug_logs.route("/api/download/<filename>")
-def download_log_file(filename):
-    allowed = {
-        "reward": "logs/reward_log.json",
-        "users": "logs/user_info.json",
-        "coins": "data/user_coins.json",
-        "tasks": "data/user_tasks.json"
-    }
-
-    if filename not in allowed:
-        return "Not allowed", 403
-
-    path = os.path.join(BASE_DIR, allowed[filename])
+@debug_logs.route("/api/download-backup/<btype>/<fname>")
+def download_backup_file(btype, fname):
+    path = os.path.join(BASE_DIR, "backups", fname)
     if not os.path.exists(path):
         return "File not found", 404
-
     return send_file(path, as_attachment=True)
+
+@debug_logs.route("/api/manual-backup/<btype>")
+def create_manual_backup(btype):
+    file_path = get_file_path_for_type(btype)
+    if not file_path:
+        return "Invalid type", 400
+    data = load_json(file_path, {})
+    save_manual_backup(btype, file_path, data)
+    return "Backup created", 200
+
+@debug_logs.route("/api/restore-backup/<btype>/<fname>")
+def restore_backup_file(btype, fname):
+    file_path = get_file_path_for_type(btype)
+    if not file_path:
+        return "Invalid type", 400
+    backup_path = os.path.join(BASE_DIR, "backups", fname)
+    success = replace_data_file(file_path, backup_path)
+    return ("Restored", 200) if success else ("Failed", 500)
+
+@debug_logs.route("/api/upload-backup/<btype>", methods=["POST"])
+def upload_manual_backup(btype):
+    file = request.files.get("file")
+    if not file:
+        return "No file provided", 400
+
+    file_path = get_file_path_for_type(btype)
+    if not file_path:
+        return "Invalid type", 400
+
+    content = json.load(file)
+    with open(file_path, "w") as f:
+        json.dump(content, f, indent=2)
+
+    save_manual_backup(btype, file_path, content)
+    return "Uploaded and saved", 200
